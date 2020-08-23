@@ -5,15 +5,15 @@ module Cube exposing (main)
 -}
 
 import Browser
-import Browser.Dom exposing (getViewport, Viewport)
+import Browser.Dom exposing (Viewport, getViewport)
 import Browser.Events exposing (onMouseMove, onResize)
 import Html exposing (Html)
 import Html.Attributes exposing (height, style, width)
 import Json.Decode as Decode exposing (Decoder, Value)
 import Math.Matrix4 as Mat4 exposing (Mat4)
 import Math.Vector3 as Vec3 exposing (Vec3, vec3)
+import Task
 import WebGL exposing (Mesh, Shader)
-import Task exposing (Task)
 
 
 type Msg
@@ -25,9 +25,18 @@ type Msg
 
 type alias Model =
     { moves : List Int
-    , size : { width : Float, height : Float }
-    , position : { x : Float, y : Float }
-    , rotation : { phi : Float, theta : Float }
+    , size :
+        { width : Float
+        , height : Float
+        }
+    , position :
+        { x : Float
+        , y : Float
+        }
+    , rotation :
+        { phi : Float
+        , theta : Float
+        }
     }
 
 
@@ -71,20 +80,19 @@ update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
         MouseMove position ->
-            ( { model | rotation = { phi = position.x/150, theta = position.y/150 } }
+            ( { model | rotation = { phi = position.x / 150, theta = position.y / 150 } }
             , Cmd.none
             )
 
         Resize width height ->
             ( { model | size = { width = toFloat width, height = toFloat height } }, Cmd.none )
 
-
         GetViewport { viewport } ->
             ( { model | size = { width = viewport.width, height = viewport.height } }, Cmd.none )
 
 
 view : Model -> Html Msg
-view { size, position, rotation } =
+view { size, rotation } =
     WebGL.toHtml
         [ width (round size.width)
         , height (round size.height)
@@ -98,7 +106,7 @@ view { size, position, rotation } =
             fragmentShader
             cubeMesh
             { perspective =
-                  perspective size.width size.height
+                perspective size.width size.height
             , rotation =
                 Mat4.identity
                     |> Mat4.rotate rotation.phi Vec3.j
@@ -108,7 +116,9 @@ view { size, position, rotation } =
 
 
 type alias Uniforms =
-    { perspective : Mat4, rotation : Mat4 }
+    { perspective : Mat4
+    , rotation : Mat4
+    }
 
 
 perspective : Float -> Float -> Mat4
@@ -128,30 +138,37 @@ perspective width height =
 -- Mesh
 
 
+white : Vec3
 white =
     vec3 200 200 200
 
 
+red : Vec3
 red =
     vec3 255 0 0
 
 
+blue : Vec3
 blue =
     vec3 0 0 255
 
 
+orange : Vec3
 orange =
     vec3 245 121 0
 
 
+green : Vec3
 green =
     vec3 0 255 0
 
 
+yellow : Vec3
 yellow =
     vec3 237 212 0
 
 
+black : Vec3
 black =
     vec3 0 0 0
 
