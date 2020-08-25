@@ -4,6 +4,8 @@ module Cube exposing (main)
    Rotating cube with colored sides.
 -}
 
+import Array exposing (Array)
+import Array.Extra
 import Browser
 import Browser.Dom exposing (Viewport, getViewport)
 import Browser.Events exposing (onMouseMove, onResize)
@@ -14,17 +16,20 @@ import Math.Matrix4 as Mat4 exposing (Mat4)
 import Math.Vector3 as Vec3 exposing (Vec3, vec3)
 import Task
 import WebGL exposing (Mesh, Shader)
+import Array
+import Html.Events exposing (onClick)
 
 
 type Msg
     = MouseMove { x : Float, y : Float }
     | Resize Int Int
     | GetViewport Viewport
+    | MoveUp
 
 
 
 type alias Model =
-    { moves : List Int
+    { moves : List Move
     , size :
         { width : Float
         , height : Float
@@ -88,11 +93,20 @@ update msg model =
             ( { model | size = { width = toFloat width, height = toFloat height } }, Cmd.none )
 
         GetViewport { viewport } ->
-            ( { model | size = { width = viewport.width, height = viewport.height } }, Cmd.none )
+            ( { model | size = { width = viewport.width, height = viewport.height } }
+            , Cmd.none
+            )
 
+        MoveUp ->
+            ( model |> addMove Up, Cmd.none )
+
+
+addMove : Move -> Model -> Model
+addMove move model =
+    { model | moves = move :: model.moves }
 
 view : Model -> Html Msg
-view { size, rotation } =
+view { size, rotation, moves } =
     WebGL.toHtml
         [ width (round size.width)
         , height (round size.height)
@@ -100,11 +114,12 @@ view { size, rotation } =
         , style "position" "absolute"
         , style "left" "0"
         , style "top" "0"
+        , onClick MoveUp
         ]
         [ WebGL.entity
             vertexShader
             fragmentShader
-            cubeMesh
+            (cubeMesh moves)
             { perspective =
                 perspective size.width size.height
             , rotation =
@@ -179,87 +194,186 @@ type alias Vertex =
     }
 
 
-cubeMesh : Mesh Vertex
-cubeMesh =
-    [ cubieMesh [ black, black, black, blue, red, white ] -1 -1 -1 0.9
-    , cubieMesh [ black, black, black, black, red, white ] -1 -1 0 0.9
-    , cubieMesh [ black, black, green, black, red, white ] -1 -1 1 0.9
-    , cubieMesh [ black, black, black, blue, red, black ] -1 0 -1 0.9
-    , cubieMesh [ black, black, black, black, red, black ] -1 0 0 0.9
-    , cubieMesh [ black, black, green, black, red, black ] -1 0 1 0.9
-    , cubieMesh [ black, yellow, black, blue, red, black ] -1 1 -1 0.9
-    , cubieMesh [ black, yellow, black, black, red, black ] -1 1 0 0.9
-    , cubieMesh [ black, yellow, green, black, red, black ] -1 1 1 0.9
-    , cubieMesh [ black, black, black, blue, black, white ] 0 -1 -1 0.9
-    , cubieMesh [ black, black, black, black, black, white ] 0 -1 0 0.9
-    , cubieMesh [ black, black, green, black, black, white ] 0 -1 1 0.9
-    , cubieMesh [ black, black, black, blue, black, black ] 0 0 -1 0.9
-    , cubieMesh [ black, black, black, black, black, black ] 0 0 0 0.9
-    , cubieMesh [ black, black, green, black, black, black ] 0 0 1 0.9
-    , cubieMesh [ black, yellow, black, blue, black, black ] 0 1 -1 0.9
-    , cubieMesh [ black, yellow, black, black, black, black ] 0 1 0 0.9
-    , cubieMesh [ black, yellow, green, black, black, black ] 0 1 1 0.9
-    , cubieMesh [ orange, black, black, blue, black, white ] 1 -1 -1 0.9
-    , cubieMesh [ orange, black, black, black, black, white ] 1 -1 0 0.9
-    , cubieMesh [ orange, black, green, black, black, white ] 1 -1 1 0.9
-    , cubieMesh [ orange, black, black, blue, black, black ] 1 0 -1 0.9
-    , cubieMesh [ orange, black, black, black, black, black ] 1 0 0 0.9
-    , cubieMesh [ orange, black, green, black, black, black ] 1 0 1 0.9
-    , cubieMesh [ orange, yellow, black, blue, black, black ] 1 1 -1 0.9
-    , cubieMesh [ orange, yellow, black, black, black, black ] 1 1 0 0.9
-    , cubieMesh [ orange, yellow, green, black, black, black ] 1 1 1 0.9
-    ]
+cubiesColours : Array (List Vec3)
+cubiesColours = 
+    [ [  black,  black, black,  blue,   red, white ] 
+    , [  black,  black, black, black,   red, white ]
+    , [  black,  black, green, black,   red, white ]
+    , [  black,  black, black,  blue,   red, black ] 
+    , [  black,  black, black, black,   red, black ] 
+    , [  black,  black, green, black,   red, black ] 
+    , [  black, yellow, black,  blue,   red, black ]
+    , [  black, yellow, black, black,   red, black ] 
+    , [  black, yellow, green, black,   red, black ] 
+    , [  black,  black, black,  blue, black, white ] 
+    , [  black,  black, black, black, black, white ] 
+    , [  black,  black, green, black, black, white ] 
+    , [  black,  black, black,  blue, black, black ] 
+    , [  black,  black, black, black, black, black ] 
+    , [  black,  black, green, black, black, black ] 
+    , [  black, yellow, black,  blue, black, black ] 
+    , [  black, yellow, black, black, black, black ] 
+    , [  black, yellow, green, black, black, black ] 
+    , [ orange,  black, black,  blue, black, white ] 
+    , [ orange,  black, black, black, black, white ] 
+    , [ orange,  black, green, black, black, white ] 
+    , [ orange,  black, black,  blue, black, black ] 
+    , [ orange,  black, black, black, black, black ] 
+    , [ orange,  black, green, black, black, black ] 
+    , [ orange, yellow, black,  blue, black, black ] 
+    , [ orange, yellow, black, black, black, black ] 
+    , [ orange, yellow, green, black, black, black ]
+    ] |> Array.fromList
+
+
+type alias CubiesPositions 
+    = Array (List Float)
+
+-- The position in space of each cubie
+initialCubiesPositions : CubiesPositions
+initialCubiesPositions =
+    Array.fromList
+        [ [ -1, -1, -1 ] -- 0
+        , [ -1, -1,  0 ] -- 1
+        , [ -1, -1,  1 ] -- 2
+        , [ -1,  0, -1 ] -- 3
+        , [ -1,  0,  0 ] -- 4
+        , [ -1,  0,  1 ] -- 5
+        , [ -1,  1, -1 ] -- 6
+        , [ -1,  1,  0 ] -- 7
+        , [ -1,  1,  1 ] -- 8
+        , [  0, -1, -1 ] -- 9
+        , [  0, -1,  0 ] -- 10
+        , [  0, -1,  1 ] -- 11
+        , [  0,  0, -1 ] -- 12
+        , [  0,  0,  0 ] -- 13
+        , [  0,  0,  1 ] -- 14
+        , [  0,  1, -1 ] -- 15
+        , [  0,  1,  0 ] -- 16
+        , [  0,  1,  1 ] -- 17
+        , [  1, -1, -1 ] -- 18
+        , [  1, -1,  0 ] -- 19
+        , [  1, -1,  1 ] -- 20
+        , [  1,  0, -1 ] -- 21
+        , [  1,  0,  0 ] -- 22
+        , [  1,  0,  1 ] -- 23
+        , [  1,  1, -1 ] -- 24
+        , [  1,  1,  0 ] -- 25
+        , [  1,  1,  1 ] -- 26
+        ]
+
+type Move = 
+    Up
+
+unsafeGet : Int -> CubiesPositions -> List Float
+unsafeGet i pos =
+    Array.get i pos |> Maybe.withDefault [ 0, 0, 0 ]
+
+
+rotateFace : Move -> CubiesPositions -> CubiesPositions
+rotateFace move pos =
+    case move of
+        Up ->
+            Array.fromList
+            [ unsafeGet 0 pos
+            , unsafeGet 1 pos
+            , unsafeGet 2 pos
+            , unsafeGet 3 pos
+            , unsafeGet 4 pos
+            , unsafeGet 5 pos
+            , unsafeGet 8 pos -- 6
+            , unsafeGet 17 pos -- 7
+            , unsafeGet 26 pos -- 8
+            , unsafeGet 9 pos
+            , unsafeGet 10 pos
+            , unsafeGet 11 pos
+            , unsafeGet 12 pos
+            , unsafeGet 13 pos
+            , unsafeGet 14 pos
+            , unsafeGet 7 pos -- 15
+            , unsafeGet 16 pos
+            , unsafeGet 25 pos -- 17
+            , unsafeGet 18 pos
+            , unsafeGet 19 pos
+            , unsafeGet 20 pos
+            , unsafeGet 21 pos
+            , unsafeGet 22 pos
+            , unsafeGet 23 pos
+            , unsafeGet 6 pos -- 24
+            , unsafeGet 15 pos -- 25
+            , unsafeGet 24 pos -- 26
+            ]
+
+
+
+cubeMesh : List Move -> Mesh Vertex
+cubeMesh moves =
+    let 
+        config = List.foldl rotateFace initialCubiesPositions moves
+    in 
+    Array.Extra.map2 
+        (\col pos -> cubieMesh col pos) 
+        cubiesColours 
+        config
+        |> Array.toList
         |> List.concat
         |> WebGL.triangles
 
 
-cubieMesh : List Vec3 -> Float -> Float -> Float -> Float -> List ( Vertex, Vertex, Vertex )
-cubieMesh colours cx cy cz w =
-    let
-        rft =
-            vec3 (cx + w / 2) (cy + w / 2) (cz + w / 2)
+cubieMesh : List Vec3 -> List Float -> List ( Vertex, Vertex, Vertex )
+cubieMesh colours position =
+    case position of
+        [ cx, cy, cz ] ->
+            let
+                w = 0.9
 
-        lft =
-            vec3 (cx - w / 2) (cy + w / 2) (cz + w / 2)
+                rft =
+                    vec3 (cx + w / 2) (cy + w / 2) (cz + w / 2)
 
-        lbt =
-            vec3 (cx - w / 2) (cy - w / 2) (cz + w / 2)
+                lft =
+                    vec3 (cx - w / 2) (cy + w / 2) (cz + w / 2)
 
-        rbt =
-            vec3 (cx + w / 2) (cy - w / 2) (cz + w / 2)
+                lbt =
+                    vec3 (cx - w / 2) (cy - w / 2) (cz + w / 2)
 
-        rbb =
-            vec3 (cx + w / 2) (cy - w / 2) (cz - w / 2)
+                rbt =
+                    vec3 (cx + w / 2) (cy - w / 2) (cz + w / 2)
 
-        rfb =
-            vec3 (cx + w / 2) (cy + w / 2) (cz - w / 2)
+                rbb =
+                    vec3 (cx + w / 2) (cy - w / 2) (cz - w / 2)
 
-        lfb =
-            vec3 (cx - w / 2) (cy + w / 2) (cz - w / 2)
+                rfb =
+                    vec3 (cx + w / 2) (cy + w / 2) (cz - w / 2)
 
-        lbb =
-            vec3 (cx - w / 2) (cy - w / 2) (cz - w / 2)
-    in
-    (case colours of
-        [ top, bottom, front, back, left, right ] ->
-            [ face top rft rfb rbb rbt
-            , face bottom rft rfb lfb lft
-            , face front rft lft lbt rbt
-            , face back rfb lfb lbb rbb
-            , face left lft lfb lbb lbt
-            , face right rbt rbb lbb lbt
-            ]
+                lfb =
+                    vec3 (cx - w / 2) (cy + w / 2) (cz - w / 2)
 
+                lbb =
+                    vec3 (cx - w / 2) (cy - w / 2) (cz - w / 2)
+            in
+            (case colours of
+                [ top, bottom, front, back, left, right ] ->
+                    [ face top rft rfb rbb rbt
+                    , face bottom rft rfb lfb lft
+                    , face front rft lft lbt rbt
+                    , face back rfb lfb lbb rbb
+                    , face left lft lfb lbb lbt
+                    , face right rbt rbb lbb lbt
+                    ]
+
+                _ ->
+                    [ face green rft rfb rbb rbt
+                    , face blue rft rfb lfb lft
+                    , face yellow rft lft lbt rbt
+                    , face red rfb lfb lbb rbb
+                    , face white lft lfb lbb lbt
+                    , face orange rbt rbb lbb lbt
+                    ]
+            )
+                |> List.concat
         _ ->
-            [ face green rft rfb rbb rbt
-            , face blue rft rfb lfb lft
-            , face yellow rft lft lbt rbt
-            , face red rfb lfb lbb rbb
-            , face white lft lfb lbb lbt
-            , face orange rbt rbb lbb lbt
-            ]
-    )
-        |> List.concat
+            face red (vec3 0 0 0) (vec3 1 0 0) (vec3 1 1 0) (vec3 1 1 1)
+        
 
 
 face : Vec3 -> Vec3 -> Vec3 -> Vec3 -> Vec3 -> List ( Vertex, Vertex, Vertex )
